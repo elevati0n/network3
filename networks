@@ -1,0 +1,154 @@
+networkfunctionality
+
+1.)  Read the message from STD in to a buffer.
+
+2.)  concat all packets together to make maximum length packets
+
+3.)  Calculate the maximum sequence number 
+
+4.)  Start a clock for time out, send all of the packets within the window.
+
+5.)  Wait for ACK's while checking for time out 
+		if (receivedACK.isInOrder(msg)) {
+			advanceWindow, sendMore
+		} else { 
+			if duplicate (msg) {
+				// increase the time-out 
+				// maybe decrease the window?  how would we know?
+			}
+		}
+
+
+
+Notes on UDP Server
+
+UDP / Datagram Sockets#
+
+
+The dgram module provides an implementation of UDP Datagram sockets.
+
+const dgram = require('dgram');
+const server = dgram.createSocket('udp4');
+
+server.on('error', (err) => {
+  console.log(`server error:\n${err.stack}`);
+  server.close();
+});
+
+server.on('message', (msg, rinfo) => {
+  console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+});
+
+server.on('listening', () => {
+  var address = server.address();
+  console.log(`server listening ${address.address}:${address.port}`);
+});
+
+server.bind(41234);
+// server listening 0.0.0.0:41234
+
+
+
+//// ?? multicasts? 
+// Tells the kernel to join a multicast group at the given multicastAddress using the IP_ADD_MEMBERSHIP 
+// socket option. If the multicastInterface argument is not specified, the operating system will try to add 
+// membership to all valid networking interfaces.
+socket.addMembership(multicastAddress[, multicastInterface])#
+multicastAddress <String>
+multicastInterface <String>, Optional
+
+
+
+
+CHILDREN PROCESSES
+Note: this function uses JSON.stringify() internally to serialize the message.
+
+child.stderr#
+<Stream>
+A Readable Stream that represents the child process's stderr.
+
+If the child was spawned with stdio[2] set to anything other than 'pipe', then this will be undefined.
+
+child.stderr is an alias for child.stdio[2]. Both properties will refer to the same value.
+
+child.stdin#
+<Stream>
+A Writable Stream that represents the child process's stdin.
+
+Note that if a child process waits to read all of its input, the child will not continue until this stream has been closed via end().
+
+If the child was spawned with stdio[0] set to anything other than 'pipe', then this will be undefined.
+
+child.stdin is an alias for child.stdio[0]. Both properties will refer to the same value.
+
+child.stdio#
+<Array>
+A sparse array of pipes to the child process, corresponding with positions in the stdio option passed to child_process.spawn() that have been set to the value 'pipe'. Note that child.stdio[0], child.stdio[1], and child.stdio[2] are also available as child.stdin, child.stdout, and child.stderr, respectively.
+
+In the following example, only the child's fd 1 (stdout) is configured as a pipe, so only the parent's child.stdio[1] is a stream, all other values in the array are null.
+
+const assert = require('assert');
+const fs = require('fs');
+const child_process = require('child_process');
+
+const child = child_process.spawn('ls', {
+    stdio: [
+      0, // Use parents stdin for child
+      'pipe', // Pipe child's stdout to parent
+      fs.openSync('err.out', 'w') // Direct child's stderr to a file
+    ]
+});
+
+assert.equal(child.stdio[0], null);
+assert.equal(child.stdio[0], child.stdin);
+
+assert(child.stdout);
+assert.equal(child.stdio[1], child.stdout);
+
+assert.equal(child.stdio[2], null);
+assert.equal(child.stdio[2], child.stderr);
+
+
+
+
+
+/**
+ * This function adds one to its input.
+ * @param {number} input any number
+ * @returns {number} that number, plus one.
+ */
+
+
+The comment before the addOne function is a JSDoc comment. Note that it begins with /** instead of /*. 
+JSDoc requires this: if you were to write a comment like
+
+
+
+// sleeps for the specified amount of time and then calls the
+// callback with the number of milliseconds since Jan 1, 1970
+var sleepTest = function(sleepTime, callback) {
+    setTimeout(
+        function() {
+            var d=new Date();
+            var t = d.getTime();
+            callback(null, t);
+        },
+        sleepTime
+    );
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

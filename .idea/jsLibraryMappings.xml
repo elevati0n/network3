@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavaScriptLibraryMappings">
+    <file url="PROJECT" libraries="{angularjs-DefinitelyTyped, asyncblock-DefinitelyTyped, createjs-DefinitelyTyped, createjs-lib-DefinitelyTyped, node-array-ext-DefinitelyTyped, node-config-manager-DefinitelyTyped, node-dir-DefinitelyTyped, node-sass-DefinitelyTyped, node-sass-middleware-DefinitelyTyped, node-slack-DefinitelyTyped, node-webkit-DefinitelyTyped}" />
+    <includedPredefinedLibrary name="ECMAScript 6" />
+  </component>
+</project>
