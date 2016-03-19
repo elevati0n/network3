@@ -18,37 +18,26 @@ var Reciever = function () {
     this.done = false;
     this.largestIndex = 0;
     this.packets = {};
-
-
-// Set up once the socket is ready
-// Event: 'listening'#
-// The 'listening' event is emitted whenever a socket begins listening for datagram
-// messages. This occurs as soon as UDP sockets are created.
-    this.server.on('listening', function () {
-    // recv.server.bind(
-    //     (Math.random(999999) % 65535) + 1024);
-
-    // bind to 0.0.0.0:random port
-    this.logger.log('[bound] ' + this.server.address().port);
-    this.listen();
-}.bind(this));
-
+    // Set up once the socket is ready
+    // Event: 'listening'#
+    // The 'listening' event is emitted whenever a socket begins listening for datagram
+    // messages. self occurs as soon as UDP sockets are created.
 };
 
-Reciever.prototype.listen = function () {
+Reciever.prototype.listen = function (self) {
     'use strict';
-    this.server.on('message', function (msg, rinfo) {
-        this.senderHost = rinfo.address;
-        this.senderPort = rinfo.port;
-        this.processMessage(msg);
+    self.server.on('message', function (msg, rinfo) {
+        self.senderHost = rinfo.address;
+        self.senderPort = rinfo.port;
+        self.processMessage(msg);
     });// the bind here was killing the program
-    this.server.on('error', function (err) {
-        this.logger.log("error message " + err);
+    self.server.on('error', function (err) {
+        self.logger.log("error message " + err);
         // placeholder
     });
 };
 
-Reciever.prototype.processMessage = function (msg) {
+Reciever.prototype.processMessage = function (msg, self) {
     'use strict';
     // the number of ints used to decode the seqlength is given by the first byte
     var seqLength = msg[0];
@@ -63,94 +52,100 @@ Reciever.prototype.processMessage = function (msg) {
     var message = msg.slice(seqLength)
         .toString();
 
-    this.packets[indexNumber] = message;
+    self.packets[indexNumber] = message;
 
     var index = helpers.seqToIndex(sequence);
 
     var status;
 
-    this.packets[helpers.seqToIndex(sequence)] = message;
+    self.packets[helpers.seqToIndex(sequence)] = message;
 
-    this.sequence += Buffer.byteLength(message);
+    self.sequence += Buffer.byteLength(message);
 
-    if (index === this.largestIndex + 1) {
-        this.largestIndex = helpers.largestConsq(this.packets);
+    if (index === self.largestIndex + 1) {
+        self.largestIndex = helpers.largestConsq(self.packets);
         status = 'ACCEPTED (in-order)';
-    } else if (this.packets[index]) {
+    } else if (self.packets[index]) {
         status = 'IGNORED';
     } else {
         status = 'ACCEPTED (out-of-order)';
     }
 
-    this.logger.log('[recv data] ' + sequence + ' (' +
+    self.logger.log('[recv data] ' + sequence + ' (' +
             Buffer.byteLength(message) + ') ' + status);
 
     var callback = function (message) {
         if (Buffer.byteLength(message, 'utf8') < 1468) {
-            this.done = true;
-            this.finalIndex = helpers.seqToIndex(sequence);
+            self.done = true;
+            self.finalIndex = helpers.seqToIndex(sequence);
         }
-        if (this.done) {
-            this.checkIfComplete();
+        if (self.done) {
+            self.checkIfComplete();
         }
-    }.bind(this);
-    this.ack(sequence, callback);
+    };//.bind(self);
+    self.ack(sequence, callback);
     // process.stdout.write(message);
 };
 
-Reciever.prototype.checkIfComplete = function () {
+Reciever.prototype.checkIfComplete = function (self) {
     'use strict';
     var done = true;
-    var index = this.finalIndex;
+    var index = self.finalIndex;
     var i;
     for (i = 0; i > 0; i -= 1) {
-        if (!this.packets[i]) {
+        if (!self.packets[i]) {
             done = false;
         }
     }
     if (done) {
-        this.print(index);
+        self.print(index);
     }
 };
 
-Reciever.prototype.print = function (index) {
+Reciever.prototype.print = function (index, self) {
     'use strict';
-    if (this.printed) {
+    if (self.printed) {
         return;
     }
     var i;
     for (i = 1; i < (index + 1); i += 1) {
-        process.stdout.write(this.packets[i]);
+        process.stdout.write(self.packets[i]);
     }
-    this.printed = true;
-    this.finalAck(function () {
-        this.logger.log('[completed]');
+    self.printed = true;
+    self.finalAck(function () {
+        self.logger.log('[completed]');
         process.exit(0);
-    }).bind(this);
+    });
 };
 
-Reciever.prototype.ack = function (seq, callback) {
+Reciever.prototype.ack = function (seq, callback, self) {
     'use strict';
     var binSeq = helpers.paddedBinary(seq);
     var data = new Buffer(binSeq);
-    this.server.send(data, 0, data.length, this.senderPort, this.senderHost,
+    self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
             callback);
     // if (callback) {
-    //     this.logger.print('call bac!');
+    //     self.logger.print('call bac!');
     // }
 };
 
 
-Reciever.prototype.finalAck = function (callback) {
+Reciever.prototype.finalAck = function (callback, self) {
     'use strict';
     var data = new Buffer('e');
-    this.server.send(data, 0, data.length, this.senderPort, this.senderHost,
+    self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
             callback);
 };
 
+// const recv = new Reciever();
+
 const recv = new Reciever();
 
-
+recv.server.on('listening', function (recv) {
+    "use strict";
+    recv.logger.log('[bound] ' + recv.server.address().port);
+    recv.listen();
+});
 
 
 
