@@ -8,15 +8,31 @@ process.stdin.setEncoding('utf8');
 
 var Reciever = function () {
     'use strict';
+
     // create a logger to access STDOUT / STDERR
     this.logger = new Logger();
+    this.server = dgram.createSocket('udp4');
+    this.server.bind();
+
     this.sequence = 0;
     this.done = false;
     this.largestIndex = 0;
     this.packets = {};
 
-    this.server = dgram.createSocket('udp4');
-    this.server.bind();
+
+// Set up once the socket is ready
+// Event: 'listening'#
+// The 'listening' event is emitted whenever a socket begins listening for datagram
+// messages. This occurs as soon as UDP sockets are created.
+    this.server.on('listening', function () {
+    // recv.server.bind(
+    //     (Math.random(999999) % 65535) + 1024);
+
+    // bind to 0.0.0.0:random port
+    this.logger.log('[bound] ' + this.server.address().port);
+    this.listen();
+}.bind(this));
+
 };
 
 Reciever.prototype.listen = function () {
@@ -77,7 +93,7 @@ Reciever.prototype.processMessage = function (msg) {
         if (this.done) {
             this.checkIfComplete();
         }
-    };
+    }.bind(this);
     this.ack(sequence, callback);
     // process.stdout.write(message);
 };
@@ -110,8 +126,7 @@ Reciever.prototype.print = function (index) {
     this.finalAck(function () {
         this.logger.log('[completed]');
         process.exit(0);
-    })
-        .bind(this);
+    }).bind(this);
 };
 
 Reciever.prototype.ack = function (seq, callback) {
@@ -134,20 +149,6 @@ Reciever.prototype.finalAck = function (callback) {
 };
 
 const recv = new Reciever();
-
-// Set up once the socket is ready
-// Event: 'listening'#
-// The 'listening' event is emitted whenever a socket begins listening for datagram
-// messages. This occurs as soon as UDP sockets are created.
-recv.server.on('listening', function () {
-    'use strict';
-    // recv.server.bind(
-    //     (Math.random(999999) % 65535) + 1024);
-
-    // bind to 0.0.0.0:random port
-    recv.logger.log('[bound] ' + recv.server.address().port);
-    recv.listen();
-});
 
 
 
