@@ -141,24 +141,11 @@ Reciever.prototype.finalAck = function (callback, self) {
 
 const recv = new Reciever();
 
-recv.server.on('listening', function (recv) {
-=======
-    var data = new Buffer(0);
-    data = 0;
-    self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
-            callback, self);
-};
-
-// const recv = new Reciever();
-
-const recv = new Reciever();
-
 recv.server.on('listening', function () {
     "use strict";
     recv.logger.log('[bound] ' + recv.server.address().port);
     recv.listen(recv);
 });
-
 
 
 
