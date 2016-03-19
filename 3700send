@@ -17,7 +17,7 @@ var Sender = function () {
         input = ['127.0.0.1', 56999];
     }
     this.logger = new Logger();
-    this.window = 1;
+    this.window = 10;
     this.done = false;
     this.sequence = 0;
     this.queue = [];
@@ -56,7 +56,7 @@ Sender.prototype.listenAck = function (self) {
     "use strict";
     self.server.on('message', function (msg, rinfo) {
         // fix to the special EOF value
-        if (msg.toString() === 'e') {
+        if (msg[0] === 0) {
             self.logger.log('[completed]');
             process.exit(rinfo);
         }
@@ -116,7 +116,7 @@ Sender.prototype.processChunk = function (chunk, length, self) {
             self.queue.push(chunk);
         }
     }
-    self.sendPackets();
+    self.sendPackets(self);
 };
 
 
@@ -132,7 +132,7 @@ Sender.prototype.sendPackets = function (self) {
     for (i = start; i < self.window + start; i += 1) {
         if (self.queue[i]) {
             self.ack[i + 1] = {acked: false};
-            self.sendData(self.queue[i]);
+            self.sendData(self.queue[i], self);
         }
     }
     self.waitForAck(self);
@@ -154,7 +154,7 @@ Sender.prototype.rebroadcast = function (self) {
     "use strict";
     Object.keys(self.ack).forEach(function (key) {
         if (self.ack[key].acked) {
-            self.sendData(self.queue[key - 1], true, self.ack[key].seq);
+            self.sendData(self.queue[key - 1], true, self.ack[key].seq, self);
         }
     });
     self.waitForAck(self);

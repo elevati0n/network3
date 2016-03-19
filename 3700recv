@@ -98,7 +98,7 @@ Reciever.prototype.checkIfComplete = function (self) {
         }
     }
     if (done) {
-        self.print(index);
+        self.print(index, self);
     }
 };
 
@@ -112,7 +112,7 @@ Reciever.prototype.print = function (index, self) {
         process.stdout.write(self.packets[i]);
     }
     self.printed = true;
-    self.finalAck(function () {
+    self.finalAck(function (self) {
         self.logger.log('[completed]');
         process.exit(0);
     });
@@ -123,7 +123,7 @@ Reciever.prototype.ack = function (seq, callback, self) {
     var binSeq = helpers.paddedBinary(seq);
     var data = new Buffer(binSeq);
     self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
-            callback);
+            callback, self);
     // if (callback) {
     //     self.logger.print('call bac!');
     // }
@@ -142,12 +142,22 @@ Reciever.prototype.finalAck = function (callback, self) {
 const recv = new Reciever();
 
 recv.server.on('listening', function (recv) {
+=======
+    var data = new Buffer(0);
+    data = 0;
+    self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
+            callback, self);
+};
+
+// const recv = new Reciever();
+
+const recv = new Reciever();
+
+recv.server.on('listening', function () {
     "use strict";
     recv.logger.log('[bound] ' + recv.server.address().port);
-    recv.listen();
+    recv.listen(recv);
 });
-
-
 
 
 
