@@ -126,6 +126,14 @@ Reciever.prototype.print = function(index) {
     }.bind(this));
 }
 
+        
+        // buff = Buffer.concat(bufferArr, 'utf8');
+        //this.processChunk(buff.toString());
+        // End of input, should exit once everything is sent and acked
+        // }
+
+    // }.bind(this));
+
 
 Reciever.prototype.ack = function(seq, callback) {
     // use the sequence number as our ack 

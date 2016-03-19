@@ -25,10 +25,10 @@ var Sender = function() {
     this.timeout = 500;
     this.waiting = false;
 
-    // parse the command line arguments for the assigned port 
+    // parse the command line arguments for the assigned port
     this.host = input[0];
     this.port = input[1];
-    // bind a UDP socket to the specified port 
+    // bind a UDP socket to the specified port
     this.server = dgram.createSocket('udp4');
     this.server.bind();
 
@@ -47,29 +47,26 @@ Sender.prototype.listen = function() {
             bufferArr.push(buff);
         }
     });
-        
-        // buff = Buffer.concat(bufferArr, 'utf8');
-        //this.processChunk(buff.toString());
-        // End of input, should exit once everything is sent and acked
-        // }
-
-    // }.bind(this));
 };
 
 Sender.prototype.listenAck = function() {
+    "use strict";
     this.server.on('message', function(msg, rinfo) {
         if (msg.toString() === 'e') {
           this.logger.log('[completed]');
           process.exit(0);
         }
-        var seq = parseInt(msg.toString(), 2)
+        var seq = parseInt(msg.toString(), 2);
         var packetIndex = helpers.seqToIndex(seq);
         var lastIndex = helpers.seqToIndex(this.sequence);
-        if (this.sendTime && !this.ack[packetIndex].acked) this.updateRTT(new Date());
+        if (this.sendTime && !this.ack[packetIndex].acked) {
+          this.updateRTT(new Date());
+        }
         this.logger.log('[recv ack] ' + seq);
         this.ack[packetIndex].acked = true;
         var done = true;
-        for (var i = lastIndex; i > (lastIndex - this.window);  i--) {
+        var i = lastIndex;
+        for (i; i > (lastIndex - this.window);  i--) {
           if (!this.ack[i] || !this.ack[i].acked) done = false;
         }
         if (done && this.waiting) {
@@ -78,17 +75,20 @@ Sender.prototype.listenAck = function() {
           this.window ++;
           this.sendPackets();
         }
-    }.bind(this));
-}
+    }.bind(this)
+  );
+};
 
 Sender.prototype.updateRTT = function(d2) {
+  "use strict";
   var d1 = this.sendTime;
   this.sendTime = false;
   var diff = ~~(d2.getTime() - d1.getTime());
   this.timeout = ~~(this.timeout * 0.8 + 0.2 * diff);
-}
+};
 
 Sender.prototype.processChunk = function(chunk, first) {
+  "use strict";
     var chunkSize = Buffer.byteLength(chunk, 'utf8');
     if (chunkSize <= 1468) {
         this.queue.push(chunk);
@@ -101,7 +101,7 @@ Sender.prototype.processChunk = function(chunk, first) {
         if (chunk) this.queue.push(chunk);
       }
     this.sendPackets();
-}
+};
 
 
 Sender.prototype.sendPackets = function() {
