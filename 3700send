@@ -6,7 +6,7 @@ process.stdin.setEncoding('utf8');
 
 // Limit of 1472 bytes
 // if we use  4 bytes for our sequence, then we have 1468 bytes left
-var Sender = function() {
+var Sender = function () {
     'use strict';
     // read from the input to get port number
     var input = process.argv;
@@ -25,6 +25,7 @@ var Sender = function() {
     this.timeout = 500;
     this.waiting = false;
 
+
     // parse the command line arguments for the assigned port
     this.host = input[0];
     this.port = input[1];
@@ -36,48 +37,58 @@ var Sender = function() {
     this.logger.log(this.host + ':' + this.port);
 };
 
-Sender.prototype.listen = function() {
+Sender.prototype.listen = function () {
     "use strict";
     var bufferArr = [];
-    process.stdin.on('readable', function() {
+    process.stdin.on('readable', function () {
         var chunk = process.stdin.read();
         var buff;
-        while(chunk) {
+        while (chunk) {
             buff = new Buffer(chunk);
             bufferArr.push(buff);
+            this.bufferSize += buff.length;
         }
+        this.seqLength = Math.ceil(this.bufferSize / this.dataLength);
     });
 };
 
-Sender.prototype.listenAck = function() {
+Sender.prototype.listenAck = function () {
     "use strict";
-    this.server.on('message', function(msg, rinfo) {
-        if (msg.toString() === 'e') {
-          this.logger.log('[completed]');
-          process.exit(0);
-        }
-        var seq = parseInt(msg.toString(), 2);
-        var packetIndex = helpers.seqToIndex(seq);
-        var lastIndex = helpers.seqToIndex(this.sequence);
-        if (this.sendTime && !this.ack[packetIndex].acked) {
-          this.updateRTT(new Date());
-        }
-        this.logger.log('[recv ack] ' + seq);
-        this.ack[packetIndex].acked = true;
-        var done = true;
-        var i = lastIndex;
-        for (i; i > (lastIndex - this.window);  i--) {
-          if (!this.ack[i] || !this.ack[i].acked) done = false;
-        }
-        if (done && this.waiting) {
+    this.server.on ('message', function (msg, rinfo) {
+      if (msg.toString() === 'e') {
+        this.logger.log ('[completed]');
+        process.exit(0);
+      }
+      // comment
+      var seq = parseInt(msg.toString (), 2);
+      var packetIndex = helpers.seqToIndex (seq);
+      var lastIndex = helpers.seqToIndex (this.sequence);
+      // check for time outs and update the acks accordingly
+      if (this.sendTime && !this.ack[packetIndex].acked) {
+        this.updateRTT(new Date());
+      }
+      // after if
+      this.logger.log('[recv ack] ' + seq);
+      this.ack[packetIndex].acked = true;
+      // loop logic
+      var done = false;
+      var i;
+      for (i = lastIndex; i > (lastIndex - this.window);  i--) {
+          if (!this.ack[i] || !this.ack[i].acked) {
+            done = false;
+          } else {
+            done = done && true;
+          }
+      }
+      if (done && this.waiting) {
           clearTimeout(this.timer);
           this.waiting = false;
           this.window ++;
           this.sendPackets();
-        }
-    }.bind(this)
-  );
-};
+      }
+    }); // .bind(this);
+  };
+
 
 Sender.prototype.updateRTT = function(d2) {
   "use strict";
@@ -87,80 +98,83 @@ Sender.prototype.updateRTT = function(d2) {
   this.timeout = ~~(this.timeout * 0.8 + 0.2 * diff);
 };
 
-Sender.prototype.processChunk = function(chunk, first) {
+Sender.prototype.processChunk = function (chunk, length) {
   "use strict";
     var chunkSize = Buffer.byteLength(chunk, 'utf8');
-    if (chunkSize <= 1468) {
+    if (chunkSize <= length) {
         this.queue.push(chunk);
-    } else if (chunkSize > 1468) {
-        while(Buffer.byteLength(chunk, 'utf8') > 1468) {
-          var stringToChunk = this.stringToChunk(chunk);
+    } else if (chunkSize > length) {
+        var stringToChunk;
+        while(Buffer.byteLength(chunk, 'utf8') > length) {
+          stringToChunk = this.stringToChunk(chunk);
           chunk = stringToChunk[1];
           this.queue.push(stringToChunk[0]);
         }
-        if (chunk) this.queue.push(chunk);
-      }
+        if (chunk) { this.queue.push(chunk); }
+    }
     this.sendPackets();
 };
 
 
 Sender.prototype.sendPackets = function() {
-  if (this.waiting) return;
+  "use strict";
+  if (this.waiting) {
+    return;
+  }
   var start = helpers.seqToIndex(this.sequence);
   this.sendTime = new Date();
 
-  for (var i = start; i < this.window + start; i++) {
-    if (!this.queue[i]) continue;
-
-    this.ack[i + 1] = {acked: false};
-    this.sendData(this.queue[i]);
+  var i = start;
+  for (i = start; i < this.window + start; i+=1) {
+    if (this.queue[i]) {
+      this.ack[i + 1] = {acked: false};
+      this.sendData(this.queue[i]);
+    }
   }
   this.waitForAck();
-}
+};
 
 Sender.prototype.waitForAck = function() {
-  this.waiting = true;
-  this.timer = setTimeout(function() {
-    if (this.waiting) {
-      this.waiting = false;
-      // if (this.window > 1) this.window--;
-      this.rebroadcast();
-    }
-  }.bind(this), this.timeout)
-}
+    "use strict";
+    this.waiting = true;
+    this.timer = setTimeout(function() {
+      if (this.waiting) {
+        this.waiting = false;
+        // if (this.window > 1) this.window--;
+        this.rebroadcast();
+      }
+    }// .bind(this), this.timeout);
+  );
+};
 
 Sender.prototype.rebroadcast = function() {
+  "use strict";
   Object.keys(this.ack).forEach(function(key) {
     if (!this.ack[key].acked) {
       this.sendData(this.queue[key - 1], true, this.ack[key].seq);
     }
-  }.bind(this));
+  });
   this.waitForAck();
-}
+};
 
 Sender.prototype.sendData = function(data, resending, seq) {
-    data = new Buffer(data);
-    if (!resending) this.sequence += data.length;
+    "use strict";
+    var dataBuffer = new Buffer(data);
+    if (!resending) { this.sequence += dataBuffer.length;} 
+    // TODO : refactor   
     var seq = seq || this.sequence;
+    
+
     this.ack[helpers.seqToIndex(seq)].seq = seq;
-    var sequence = this.convertSequence(seq);
+    var sequence = helpers.intBufferToIndex(seq, this.seqLength);
     var buffer = Buffer.concat([sequence, data]);
     this.logger.log('[send data] ' + this.sequence + ' (' + data.length + ')' );
     this.server.send(buffer, 0, buffer.length, this.port, this.host);
-}
-
-Sender.prototype.convertSequence = function(seq) {
-    var binSeq = helpers.paddedBinary(seq, 32);
-    buffer = new Buffer(4);
-    buffer[0] = parseInt(binSeq.slice(0,8), 2);
-    buffer[1] = parseInt(binSeq.slice(8,16), 2);
-    buffer[2] = parseInt(binSeq.slice(16,24), 2);
-    buffer[3] = parseInt(binSeq.slice(24,32), 2);
-    return buffer;
-}
+};
 
 // Returns a touple of [Chunk, Rest of string]
 Sender.prototype.stringToChunk = function(str) {
+  "use strict";
   var chunk = '';
   while(Buffer.byteLength(chunk, 'utf8') < 1468) {
     var char = str.charAt(0);
@@ -177,6 +191,7 @@ Sender.prototype.stringToChunk = function(str) {
 const sender = new Sender();
 
 sender.server.on('listening', function() {
+    "use strict";
     sender.listen();
     sender.listenAck();
 }.bind(this));
