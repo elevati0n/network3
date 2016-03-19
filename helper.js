@@ -48,14 +48,14 @@ exports.largestConsq = function (obj) {
 };
 
 //
-exports.convertSequence = function (seq) {
+exports.convertSequence = function (seq, sequenceNumberLength) {
     'use strict';
     //stub to build dynamic packet length
     // divide (packet length / total message length == max sequence number)
     // sequenceNumberLength = parseInt(binSeq.slice(0, 8), 2);
     // represent the sequence number as a 32 bit int string
 
-    var sequenceNumberLength = 4; // calculations
+    // var sequenceNumberLength = 4; // calculations
 
     // one int is represent 1 byte of the length byte sequence
     var binseqLength = sequenceNumberLength * 8;
