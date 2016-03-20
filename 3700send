@@ -163,7 +163,8 @@ Sender.prototype.waitForAck = function (self) {
             // if  self.window > 1) self.window--;
             self.rebroadcast(self);
         }
-    };
+    }//.bind(this), this.timeout
+    );
 };
 
 Sender.prototype.rebroadcast = function (self) {
