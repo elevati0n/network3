@@ -163,7 +163,8 @@ Sender.prototype.waitForAck = function (self) {
             // if  self.window > 1) self.window--;
             self.rebroadcast(self);
         }
-    });
+    }.bind(
+        self.waiting = false));
 };
 
 Sender.prototype.sendData = function (data, resending, seq, self) {
@@ -184,19 +185,19 @@ Sender.prototype.sendData = function (data, resending, seq, self) {
 };
 
 
-Sender.prototype.rebroadcast = function() {
-  // iterate over the ack array for outstanding packets
-  Object.keys(this.ackStatus).forEach(function(key) {
+Sender.prototype.rebroadcast = function(key, self) {
+    "use strict";   
+    // iterate over the ack array for outstanding packets
+    Object.keys(this.ack).forEach(function(key) {
     // if we find one resend it 
-    if (!this.ackStatus[key].acked) {
-       // the data is in the queue which indexed by the sequence number
-       
+    if (!this.ack[key].acked) {
+        // the data is in the queue which indexed by the sequence number
        this.resendData(key);
-       //this.window--; 
+        //this.window--; 
     }
   }.bind(this));
   this.waitForAck();
-}
+};
 
 // Returns a touple of [Chunk, Rest of string]
 Sender.prototype.stringToChunk = function (str) {
@@ -222,4 +223,4 @@ sender.server.on('listening', function () {
     sender.listen(sender);
     sender.sendPackets(sender);
     sender.listenAck(sender);
-}); //.bind(sender);
+}); //.bind(sender); 

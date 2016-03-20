@@ -43,7 +43,7 @@ Reciever.prototype.processMessage = function (msg, self) {
     // the number of ints used to decode the seqlength is given by the first byte
     var headerLength = msg[0];
     // helper function parses the int byte and decodes the dynamic sequence number length
-    var index = helpers.seqArrayIndexFromMessageBuffer(msg);
+    // var index = helpers.seqArrayIndexFromMessageBuffer(msg);
 
     // the next n bytes of the buffer correspond to the sequence number
     // var seqBuffr = msg.slice(1, seqLength);
