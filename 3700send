@@ -36,6 +36,7 @@ var Sender = function () {
 
     // print to STDERR the specified error message
     this.logger.log(this.host + ':' + this.port);
+    this.listen(this);
 
     // bind a UDP socket to the specified port
     this.server = dgram.createSocket('udp4');
@@ -232,7 +233,7 @@ var serverLoop = false;
 sender.server.on('listening', function () {
     "use strict";
     // sender.logger.log('entering listening');
-    sender.listen(sender);
+    // sender.listen(sender);
     // sender.logger.log('exit listening');
     serverLoop = true;
 }); //.bind(sender); 
