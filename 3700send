@@ -48,7 +48,6 @@ Sender.prototype.listen = function (self) {
             bufferArr.push(buff);
             self.bufferSize += buff.length;
         }
-        self.seqLength = Math.ceil(self.bufferSize / self.dataLength);
     });
 };
 
@@ -72,7 +71,7 @@ Sender.prototype.listenAck = function (self) {
         self.logger.log('[recv ack] ' + seq);
         self.ack[packetIndex].acked = true;
         // loop logic
-        var done = false;
+        var done = true;
         var i;
         for (i = lastIndex; i > (lastIndex - self.window); i -= 1) {
             if (self.ack[i] || self.ack[i].acked) {

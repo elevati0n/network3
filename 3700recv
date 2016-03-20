@@ -29,7 +29,7 @@ Reciever.prototype.listen = function (self) {
     self.server.on('message', function (msg, rinfo) {
         self.senderHost = rinfo.address;
         self.senderPort = rinfo.port;
-        self.processMessage(msg);
+        self.processMessage(msg, self);
     });// the bind here was killing the program
     self.server.on('error', function (err) {
         self.logger.log("error message " + err);
