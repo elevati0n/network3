@@ -1,6 +1,6 @@
 #!/usr/bin/node
 
-var Logger = require('./logger');   
+var Logger = require('./logger');  
 var helpers = require('./helper');
 
 var dgram = require('dgram');
@@ -13,23 +13,27 @@ var Reciever = function () {
     this.logger = new Logger();
     this.server = dgram.createSocket('udp4');
     this.server.bind();
-
-    this.sequence = 0;
-    this.done = false;
-    this.largestIndex = 0;
-    this.packets = {};
     // Set up once the socket is ready
     // Event: 'listening'#
     // The 'listening' event is emitted whenever a socket begins listening for datagram
     // messages. self occurs as soon as UDP sockets are created.
+
+    // for the call back go to the end of the program after the instance is created.
+
+    this.sequence = 0;
+    this.done = false;
+    // store the largest consequences sequence number we've encoutered so we will know if we are in order
+    this.largestIndex = 0;
+    this.packets = {};
 };
 
 Reciever.prototype.listen = function (self) {
     'use strict';
-
+    // when event message is emitted 
     self.server.on('message', function (msg, rinfo) {
         self.senderHost = rinfo.address;
         self.senderPort = rinfo.port;
+        // store or different results depending on if the packet is duplicated, or out of order 
         self.processMessage(msg, self);
     });// the bind here was killing the program
     self.server.on('error', function (err) {
@@ -41,55 +45,31 @@ Reciever.prototype.listen = function (self) {
 Reciever.prototype.processMessage = function (msg, self) {
     'use strict';
     // the number of ints used to decode the seqlength is given by the first byte
-    var headerLength = msg[0];
-    // helper function parses the int byte and decodes the dynamic sequence number length
-    var index = helpers.seqArrayIndexFromMessageBuffer(msg);
-
+    var seqLength = msg[0];
     // the next n bytes of the buffer correspond to the sequence number
-    // var seqBuffr = msg.slice(1, seqLength);
-    // var seqBinary = helpers.intBufferToIndex(seqBuffr, seqLength);
-    
-    // helper function parses the array and decodes the dynamic sequence number length
-    var index = helpers.seqArrayIndexFromMessageBuffer(msg);
+    var seqBinary = helpers.intBufferToIndex(msg, seqLength);
+    var indexNumber = helpers.seqToIndex(seqBinary);
     // sequence number is written as a 32 bit int, stored as 4 1-byte ints
-    // var sequence = parseInt(seqBinary, 2);
-
+    var sequence = parseInt(seqBinary, 2);
 
     // message is the rest of the buffer
-    var message = msg.slice(msg[headerLength]).toString();
+    var message = msg.slice(seqLength)
+        .toString();
 
-    // save the message (IN ORDER) so it will be in the place we need it later
-    self.packets[index] = message;
+    self.packets[indexNumber] = message;
+
+    var index = helpers.seqToIndex(sequence);
 
     var status;
 
-    // why would we do this?  what if its a duplicate?
+    self.packets[helpers.seqToIndex(sequence)] = message;
+
+    // why do we have this, won't it screw up on duplicates?
     self.sequence += Buffer.byteLength(message);
-
-    // END OF OLD SEQUENCE LOGIC
-
-    // DUPLICATE CODE?? CHECK ME 
-
-
-    // // message is the rest of the buffer
-    // var message = msg.slice(seqLength)
-    //     .toString();
-
-    // self.packets[indexNumber] = message;
-
-    // var status;
-
-    // //  
-    // //self.packets[helpers.seqToIndex(sequence)] = message;
-
-    // // why would we do this?
-    // //self.sequence += Buffer.byteLength(message);
-
-
-
 
 
     if (index === self.largestIndex + 1) {
+        // iterate over the packet's we've receieved to account for out of orders
         self.largestIndex = helpers.largestConsq(self.packets);
         status = 'ACCEPTED (in-order)';
     } else if (self.packets[index]) {
@@ -98,20 +78,19 @@ Reciever.prototype.processMessage = function (msg, self) {
         status = 'ACCEPTED (out-of-order)';
     }
 
-    // may need to multiply index by data length to resolve its value
-    self.logger.log('[recv data] ' + index + ' (' +
+    self.logger.log('[recv data] ' + sequence + ' (' +
             Buffer.byteLength(message) + ') ' + status);
 
     var callback = function (message) {
         if (Buffer.byteLength(message, 'utf8') < 1468) {
             self.done = true;
-            self.finalIndex = helpers.seqToIndex(index);
+            self.finalIndex = helpers.seqToIndex(sequence);
         }
         if (self.done) {
             self.checkIfComplete();
         }
     };//.bind(self);
-    self.ack(index, callback);
+    self.ack(sequence, callback);
     // process.stdout.write(message);
 };
 
@@ -160,9 +139,10 @@ Reciever.prototype.ack = function (seq, callback, self) {
 
 Reciever.prototype.finalAck = function (callback, self) {
     'use strict';
-    var data = new Buffer('e');
+    var data = new Buffer(0);
+    data = 0;
     self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
-            callback);
+            callback, self);
 };
 
 // const recv = new Reciever();
@@ -174,7 +154,6 @@ recv.server.on('listening', function () {
     recv.logger.log('[bound] ' + recv.server.address().port);
     recv.listen(recv);
 });
-
 
 
 

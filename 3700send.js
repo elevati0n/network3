@@ -4,21 +4,20 @@ var Logger = require('./logger');
 var helpers = require('./helper');
 process.stdin.setEncoding('utf8');
 
-// UDP Total DataLimit of 1472 bytes
-var packetSize = 1472;
+// Limit of 1472 bytes
 // if we use  4 bytes for our sequence, then we have 1468 bytes left
 var Sender = function () {
     'use strict';
     // read from the input to get port number
     var input = process.argv;
-   if (!input) {
+    if (!input) {
         input = process.argv[2].split(':');
-   } else {
-        //use preset for testing
-    input = ['127.0.0.1', 56999];
-   }
+    } else {
+        // use preset for testing
+        input = ['127.0.0.1', 56999];
+    }
     this.logger = new Logger();
-    this.window = 10;
+    this.window = 1;
     this.done = false;
     this.sequence = 0;
     this.queue = [];
@@ -38,7 +37,6 @@ var Sender = function () {
     this.logger.log(this.host + ':' + this.port);
 };
 
-// read the input stream from STDIn at once, to ensure maximum packet stuffing
 Sender.prototype.listen = function (self) {
     "use strict";
     var bufferArr = [];
@@ -50,8 +48,7 @@ Sender.prototype.listen = function (self) {
             bufferArr.push(buff);
             self.bufferSize += buff.length;
         }
-
-        self.seqLength = self.buffersize;  // divide out the constant?? prob not worth it
+        
         // self.seqLength = Math.ceil(self.bufferSize / self.dataLength);
     });
 };
@@ -60,31 +57,24 @@ Sender.prototype.listenAck = function (self) {
     "use strict";
     self.server.on('message', function (msg, rinfo) {
         // fix to the special EOF value
-        if (msg.buf.length === 1) {
+        if (msg[0] === 0) {
             self.logger.log('[completed]');
             process.exit(rinfo);
         }
-        // // comment
-        // var seq = parseInt(msg.toString(), 2);
-        // var packetIndex = helpers.seqToIndex(seq);
+        // comment
+        var seq = parseInt(msg.toString(), 2);
+        var packetIndex = helpers.seqToIndex(seq);
         var lastIndex = helpers.seqToIndex(self.sequence);
-        // // check for time outs and update the acks accordingly
-
-        // helper function parses the array and decodes the dynamic sequence number length
-        var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
-
-        // if we receieved an ACK packet and its this one, let change RTT
+        // check for time outs and update the acks accordingly
         if (self.sendTime && self.ack[packetIndex].acked) {
-            self.updateRTT(new Date(), self);
+            self.updateRTT(new Date());
         }
         // after if
-        self.logger.log('[recv ack] ' + packetIndex * packetSize);
+        self.logger.log('[recv ack] ' + seq);
         self.ack[packetIndex].acked = true;
-	    this.waiting = true;
         // loop logic
-        var done;
+        var done = false;
         var i;
-
         for (i = lastIndex; i > (lastIndex - self.window); i -= 1) {
             if (self.ack[i] || self.ack[i].acked) {
                 done = false;
@@ -96,9 +86,7 @@ Sender.prototype.listenAck = function (self) {
         if (done && self.waiting) {
             clearTimeout(self.timer);
             self.waiting = false;
-            self.window *= 1.2;
-            self.sendPackets();
-        } else {
+            self.window += 2;
             self.sendPackets();
         }
     }); // .bind self);
@@ -135,7 +123,9 @@ Sender.prototype.processChunk = function (chunk, length, self) {
 
 Sender.prototype.sendPackets = function (self) {
     "use strict";
-
+    if (self.waiting) {
+        return;
+    }
     var start = helpers.seqToIndex(self.sequence);
     self.sendTime = new Date();
 
@@ -146,16 +136,11 @@ Sender.prototype.sendPackets = function (self) {
             self.sendData(self.queue[i], self);
         }
     }
-    if (self.waiting) {
-        return;
-    }
-    // this resets the timer
     self.waitForAck(self);
 };
 
 Sender.prototype.waitForAck = function (self) {
     "use strict";
-    // set boolean so it will run once and only once
     self.waiting = true;
     self.timer = setTimeout(function () {
         if (self.waiting) {
@@ -163,7 +148,7 @@ Sender.prototype.waitForAck = function (self) {
             // if  self.window > 1) self.window--;
             self.rebroadcast(self);
         }
-    }).bind(self, (self.timeout));
+    });// .bind self), self.timeout););
 };
 
 Sender.prototype.rebroadcast = function (self) {
@@ -215,6 +200,5 @@ const sender = new Sender();
 sender.server.on('listening', function () {
     "use strict";
     sender.listen(sender);
-    sender.sendPackets(sender);
     sender.listenAck(sender);
 }); //.bind(sender);

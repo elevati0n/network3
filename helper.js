@@ -3,7 +3,7 @@
 // fill a 32 bit binary string with the represenation of this num
 // (int, padlen) -> 32bitbinaryString
 exports.paddedBinary = function (num, pad) {
-    "use strict";
+    'use strict';
     var binary = num.toString(2);
     while (binary.length < pad) {
         binary = '0' + binary;
@@ -89,4 +89,22 @@ exports.convertSeqFromIntBuffer = function (seqBuffr) {
     // now from the binary string recover the integer corresponding to the sequence number
     var sequence = parseInt(seqBinary, 2);
     return sequence;
+};
+// the entire sequence number logic, in one easy place
+// (MessageasIntBuffer), -> sequence number
+// put all of the SEQUENCE NUMBER LOGIC IN ONE PLACE!!!
+exports.seqArrayIndexFromMessageBuffer = function (msg) {
+    'use strict';
+    // the sequence number length is stored as the first int of the msg
+    var seqLength = msg[0];
+    // the next n bytes of the buffer correspond to the sequence number
+    var seqBuffer = msg.slice(1, seqLength);
+    // var seqBinary = this.intBufferToIndex(seqBuffr, seqLength);
+    // convert from an int buffer to a binary number string that corresponds
+    var binaryString = this.seqBinary(seqBuffer);
+    // sequence number is written as a 32 bit int, stored as 4 1-byte ints
+    var sequence = parseInt(binaryString, 2);
+    // finally transform from a sequence number to the seq-array Index int;
+    var index = this.seqToIndex(sequence);
+    return index;
 };
