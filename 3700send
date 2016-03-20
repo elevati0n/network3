@@ -56,9 +56,16 @@ Sender.prototype.listen = function (self) {
             self.bufferSize += buff.length;
         }
 
+        var catbuff = Buffer.concat(bufferArr, 'utf8');
+        this.processChunk(catbuff.toString());
+
         self.seqLength = self.buffersize;  // divide out the constant?? prob not worth it
         // self.seqLength = Math.ceil(self.bufferSize / self.dataLength);
+        // bind a UDP socket to the specified port
+        this.server = dgram.createSocket('udp4');
+        this.server.bind();
     });
+    // return bufferArr;
 };
 
 Sender.prototype.listenAck = function (self) {
@@ -101,7 +108,6 @@ Sender.prototype.processChunk = function (chunk, length, self) {
             self.queue.push(chunk);
         }
     }
-    self.sendPackets(self);
 };
 
 
@@ -225,13 +231,16 @@ const sender = new Sender();
 var serverLoop = false;
 sender.server.on('listening', function () {
     "use strict";
+    // sender.logger.log('entering listening');
     sender.listen(sender);
+    // sender.logger.log('exit listening');
     serverLoop = true;
 }); //.bind(sender); 
 
 
 
 while (serverLoop) { 
+    sender.logger.log('entering serverloop');
     sender.sendPackets(sender);
     sender.waitForAck(sender);
     serverLoop = sender.checkAnyOutstanding(sender);
@@ -247,9 +256,7 @@ sender.server.on('message', function (msg, rinfo) {
             process.exit(rinfo);
         }
         sender.listenAck(sender);
-         
         var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
-
         this.ack[packetIndex].acked = true;
 });
 
