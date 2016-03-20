@@ -10,14 +10,13 @@ process.stdin.setEncoding('utf8');
 var Sender = function () {
     'use strict';
     // read from the input to get port number
-      var input = process.argv;
-    if (!input) {
-        input = process.argv[2].split(':');
-    }
-    if (!input) {
+    var input = process.argv;
+//   if (!input) {
+    input = process.argv[2].split(':');
+ //  } else {
         // use preset for testing
-       input = ['127.0.0.1', 56999];
-    }
+   // input = ['127.0.0.1', 56999];
+  // }
     this.logger = new Logger();
     this.window = 10;
     this.done = false;
@@ -113,22 +112,21 @@ Sender.prototype.sendPackets = function (self) {
 
         var i = start;
 
-        for (start = 0; i < self.window ; i += 1) {
+        for (start = 0; i < self.window ; i++) {
         if (!self.queue[i]) {
-            this.logger.log("!this.queue[i]" + i);
+            //this.logger.log("!this.queue[i]" + i);
         }
-        if (!self.queue[i-1]) continue;
+        if (!self.queue[i]) continue;
         
         //this.logger.log("i am in the sliding window");
         if (!self.ack[i]) {
             // self.server.send(buffer, 0, buffer.length, self.port, self.host);
-            this.logger.log("sending this.queue[--i]" + i);
             self.sendData(self.queue[(i-1)], false, false, self);
-        }// else { 
+        } else { 
         //this.ackStatus[i + 1] = {acked: false};
             // will resend if it has timed out 
             // this.resendData(i);
-        //}
+        }
     }   
 };
 
@@ -164,7 +162,7 @@ Sender.prototype.sendData = function (data, resending, seq, self) {
 
     self.logger.log('[send data] ' + self.sequence + ' (' + data.length + ')');
 
-    this.ack[i + 1] = {acked: false};    // data is actually sent here
+    // data is actually sent here
     self.server.send(buffer, 0, buffer.length, self.port, self.host);
 };
 
@@ -215,7 +213,8 @@ Sender.prototype.checkAnyOutstanding = function (self) {
             // break;
             // done = true;
         } else {
-            return false;        }   
+            return false;
+        }   
     }
     return true;
 };
