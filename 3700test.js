@@ -20,6 +20,7 @@ var Tester = function () {
    } else {
        input = ['127.0.0.1', 57000];
    // }
+}
     this.logger = new Logger();
     this.window = 10;
     this.done = false;

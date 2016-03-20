@@ -12,11 +12,11 @@ var Sender = function () {
     // read from the input to get port number
       var input = process.argv;
     // if (input[2]) {
-        input = process.argv[2].split(':');
+        // input = process.argv[2].split(':');
     // }
     // if (!input) {
         // use preset for testing
-       // input = ['127.0.0.1', 56999];
+       input = ['127.0.0.1', 56999];
     // }
     this.logger = new Logger();
     this.window = 10;

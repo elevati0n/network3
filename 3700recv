@@ -11,13 +11,13 @@ var Reciever = function () {
 
     // create a logger to access STDOUT / STDERR
     this.logger = new Logger();
-    this.server = dgram.createSocket('udp4');
-    this.server.bind();
+
 
     this.sequence = 0;
     this.done = false;
     this.largestIndex = 0;
     this.packets = {};
+    this.listen(this);
     // Set up once the socket is ready
     // Event: 'listening'#
     // The 'listening' event is emitted whenever a socket begins listening for datagram
@@ -26,16 +26,8 @@ var Reciever = function () {
 
 Reciever.prototype.listen = function (self) {
     'use strict';
-
-    self.server.on('message', function (msg, rinfo) {
-        self.senderHost = rinfo.address;
-        self.senderPort = rinfo.port;
-        self.processMessage(msg, self);
-    });// the bind here was killing the program
-    self.server.on('error', function (err) {
-        self.logger.log("error message " + err);
-        // placeholder
-    });
+    self.server = dgram.createSocket('udp4');
+    self.server.bind();
 };
 
 Reciever.prototype.processMessage = function (msg, self) {
@@ -151,12 +143,11 @@ Reciever.prototype.ack = function (seq, callback, self) {
     var binSeq = helpers.paddedBinary(seq);
     var data = new Buffer(binSeq);
     self.server.send(data, 0, data.length, self.senderPort, self.senderHost,
-            callback, self);
+            callback);
     // if (callback) {
     //     self.logger.print('call bac!');
     // }
 };
-
 
 Reciever.prototype.finalAck = function (callback, self) {
     'use strict';
@@ -167,13 +158,25 @@ Reciever.prototype.finalAck = function (callback, self) {
 
 // const recv = new Reciever();
 
-const recv = new Reciever();
+var recv = new Reciever();
 
 recv.server.on('listening', function () {
     "use strict";
     recv.logger.log('[bound] ' + recv.server.address().port);
-    recv.listen(recv);
-});
+    });
+
+recv.server.on('message', function (msg, rinfo) {
+    "use strict";
+        recv.senderHost = rinfo.address;
+        recv.senderPort = rinfo.port;
+        recv.processMessage(msg, recv);
+    });// the bind here was killing the program
+
+recv.server.on('error', function (err) {
+        "use strict";
+        recv.logger.log("error message " + err);
+        // placeholder
+    });
 
 
 
