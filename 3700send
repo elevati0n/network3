@@ -36,7 +36,7 @@ var Sender = function () {
 
     // print to STDERR the specified error message
     this.logger.log(this.host + ':' + this.port);
-    this.listen(this);
+    // this.listen(this);
     // this.logger.log(this.host + ':' + this.port);
 
     // bind a UDP socket to the specified port
@@ -237,20 +237,19 @@ Sender.prototype.checkAnyOutstanding = function (self) {
 
 const sender = new Sender();
 
-var serverLoop = true;
+var serverLoop = false;
 
 sender.server.on('listening', function () {
     "use strict";
     // sender.logger.log('entering listening');
     // sender.listen(sender);
     // sender.logger.log('exit listening');
+    sender.listen(sender);
     serverLoop = true;
 }); //.bind(sender); 
 
 
-
 while (serverLoop) { 
-    sender.listen(sender);
     sender.logger.log('entering serverloop');
     sender.sendPackets(sender);
     sender.waitForAck(sender);
