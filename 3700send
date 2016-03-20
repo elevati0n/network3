@@ -10,12 +10,12 @@ var Sender = function () {
     'use strict';
     // read from the input to get port number
     var input = process.argv;
-    if (!input) {
+//    if (!input) {
         input = process.argv[2].split(':');
-    } else {
+//    } else {
         // use preset for testing
-        input = ['127.0.0.1', 56999];
-    }
+  //      input = ['127.0.0.1', 56999];
+   // }
     this.logger = new Logger();
     this.window = 10;
     this.done = false;
@@ -48,7 +48,6 @@ Sender.prototype.listen = function (self) {
             bufferArr.push(buff);
             self.bufferSize += buff.length;
         }
-        self.seqLength = Math.ceil(self.bufferSize / self.dataLength);
     });
 };
 
@@ -66,14 +65,16 @@ Sender.prototype.listenAck = function (self) {
         var lastIndex = helpers.seqToIndex(self.sequence);
         // check for time outs and update the acks accordingly
         if (self.sendTime && self.ack[packetIndex].acked) {
-            self.updateRTT(new Date());
+            self.updateRTT(new Date(), self);
         }
         // after if
         self.logger.log('[recv ack] ' + seq);
         self.ack[packetIndex].acked = true;
+	this.waiting = false;
         // loop logic
         var done = false;
         var i;
+
         for (i = lastIndex; i > (lastIndex - self.window); i -= 1) {
             if (self.ack[i] || self.ack[i].acked) {
                 done = false;
