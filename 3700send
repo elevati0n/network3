@@ -11,13 +11,13 @@ var Sender = function () {
     'use strict';
     // read from the input to get port number
       var input = process.argv;
-    if (!input) {
+    // if (input[2]) {
         input = process.argv[2].split(':');
-    }
-    if (!input) {
+    // }
+    // if (!input) {
         // use preset for testing
-       input = ['127.0.0.1', 56999];
-    }
+       // input = ['127.0.0.1', 56999];
+    // }
     this.logger = new Logger();
     this.window = 10;
     this.done = false;
@@ -27,6 +27,7 @@ var Sender = function () {
     this.timeout = 500;
     this.waiting = false;
     this.packetSize = 1472;
+    this.highestConsqAck = 0;
 
     // parse the command line arguments for the assigned port
     this.host = input[0];
@@ -111,25 +112,26 @@ Sender.prototype.sendPackets = function (self) {
         var start = helpers.seqToIndex(self.sequence);
         self.sendTime = new Date();
 
-        var i = start;
+        var i = self.highestConsqAck;
 
         for (start = 0; i < self.window ; i += 1) {
         if (!self.queue[i]) {
-            this.logger.log("!this.queue[i]" + i);
+            self.logger.log("!this.queue[i]" + i);
+            self.highestConsqAck = i;
+        } else if (!self.ack[i]) {
+            self.window += 3;
+            // hasnt been sent before, send it for hte first time 
+        } else {  // if self.ack[i]==fale
+            // probable duplicate but could be a time out
         }
-        if (!self.queue[i-1]) continue;
-        
-        //this.logger.log("i am in the sliding window");
-        if (!self.ack[i]) {
             // self.server.send(buffer, 0, buffer.length, self.port, self.host);
-            this.logger.log("sending this.queue[--i]" + i);
-            self.sendData(self.queue[(i-1)], false, false, self);
-        }// else { 
+            self.logger.log("sending this.queue[--i]" + i);
+            self.sendData(self.queue[i], false, false, self);
+    }// else { 
         //this.ackStatus[i + 1] = {acked: false};
             // will resend if it has timed out 
             // this.resendData(i);
         //}
-    }   
 };
 
 Sender.prototype.waitForAck = function (self) {
@@ -142,13 +144,12 @@ Sender.prototype.waitForAck = function (self) {
             // if  self.window > 1) self.window--;
             // self.rebroadcast(self);
         }
-    }.bind(
-        self.waiting = false));
+    }, this.timeout);
 };
 
 Sender.prototype.sendData = function (data, resending, seq, self) {
     "use strict";
-    var dataBuffer = new Buffer(data);
+    var dataBuffer = new Buffer(data.size);
     if (!resending) {
         self.sequence += dataBuffer.length;
         seq = self.sequence;
@@ -164,7 +165,7 @@ Sender.prototype.sendData = function (data, resending, seq, self) {
 
     self.logger.log('[send data] ' + self.sequence + ' (' + data.length + ')');
 
-    this.ack[i + 1] = {acked: false};    // data is actually sent here
+    this.ack[sequence] = {acked: false};    // data is actually sent here
     self.server.send(buffer, 0, buffer.length, self.port, self.host);
 };
 
@@ -176,11 +177,12 @@ Sender.prototype.rebroadcast = function(key, self) {
     // if we find one resend it 
     if (!self.ack[key].acked) {
         // the data is in the queue which indexed by the sequence number
-       this.sendData(this.queue[key - 1], true, this.ack[key].seq);
+       self.sendData(self.queue[key - 1], true, self.ack[key].seq);
         //this.window--; 
     }
-  }.bind(self));
+  }//);
   // this.waitForAck();
+  );
 };
 
 // Returns a touple of [Chunk, Rest of string]
@@ -222,10 +224,11 @@ Sender.prototype.checkAnyOutstanding = function (self) {
 
 const sender = new Sender();
 
-var serverLoop = true;
+var serverLoop = false;
 sender.server.on('listening', function () {
     "use strict";
     sender.listen(sender);
+    serverLoop = true;
 }); //.bind(sender); 
 
 while (serverLoop) { 
@@ -246,6 +249,7 @@ sender.server.on('message', function (msg, rinfo) {
         var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
 
         this.ack[packetIndex].acked = true;
+
 
 
 });
