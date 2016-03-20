@@ -60,7 +60,7 @@ Sender.prototype.listen = function (self) {
     });
 };
 
-Sender.prototype.listenAck = function (self, msg) {
+Sender.prototype.listenAck = function (self) {
     "use strict";
     // continue execution of the program, self should be moved
     if (self.waiting) {
@@ -201,11 +201,10 @@ Sender.prototype.stringToChunk = function (str) {
 // Returns a touple of [Chunk, Rest of string]
 Sender.prototype.checkAnyOutstanding = function (self) {
     "use strict";     
-    var lastIndex = helpers.seqToIndex(self.sequence);
+    var lastIndex = self.bufferSize;
     // // check for time outs and update the acks accordingly
     // helper function parses the array and decodes the dynamic sequence number length
     // var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
-    var done;
     var i;
     for (i = 0; i > (lastIndex); i += 1) {
         if (self.ack[i] || self.ack[i].acked) {
@@ -215,9 +214,7 @@ Sender.prototype.checkAnyOutstanding = function (self) {
             // done = true;
         } else {
             return false;
-        }
-
-        
+        }   
     }
     return true;
 };
@@ -244,22 +241,13 @@ sender.server.on('message', function (msg, rinfo) {
             sender.logger.log('[completed]');
             process.exit(rinfo);
         }
+         
+        var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
+
         this.ack[packetIndex].acked = true;
 
 
-
-        // continue execution of the program, self should be moved
-        if (sender.waiting) {
-            clearTimeout(sender.timer);
-            sender.waiting = false;
-            sender.window *= 1.2;
-            return true;
-            // self.sendPackets();
-        } else {
-            return false;
-            // self.sendPackets();
-        }
-    }); // .bind self);
+});
 
 // Logger.log("hi");
 
