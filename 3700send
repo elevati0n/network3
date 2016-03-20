@@ -120,8 +120,8 @@ Sender.prototype.sendPackets = function (self) {
         
         //this.logger.log("i am in the sliding window");
         if (!self.ack[i]) {
-            self.server.send(buffer, 0, buffer.length, self.port, self.host);
-            self.sendData(self.queue[(i-1)]);
+            // self.server.send(buffer, 0, buffer.length, self.port, self.host);
+            self.sendData(self.queue[(i-1)], false, false, self);
         } else { 
         //this.ackStatus[i + 1] = {acked: false};
             // will resend if it has timed out 
