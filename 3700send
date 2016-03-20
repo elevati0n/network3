@@ -37,11 +37,12 @@ var Sender = function () {
     // print to STDERR the specified error message
     this.logger.log(this.host + ':' + this.port);
     this.listen(this);
+    // this.logger.log(this.host + ':' + this.port);
 
     // bind a UDP socket to the specified port
     this.server = dgram.createSocket('udp4');
     this.server.bind();
-    this.bufferSize = 0;
+    // this.bufferSize = 0;
 };
 
 // read the input stream from STDIn at once, to ensure maximum packet stuffing
@@ -51,20 +52,20 @@ Sender.prototype.listen = function (self) {
     process.stdin.on('readable', function () {
         var chunk = process.stdin.read();
         var buff;
-        while (chunk) {
+        if (chunk) {
             buff = new Buffer(chunk);
             bufferArr.push(buff);
             self.bufferSize += buff.length;
-        }
+        } else {
+            var catbuff = Buffer.concat(bufferArr, 'utf8');
+            this.processChunk(catbuff.toString());
+    }
 
-        var catbuff = Buffer.concat(bufferArr, 'utf8');
-        this.processChunk(catbuff.toString());
-
-        self.seqLength = self.buffersize;  // divide out the constant?? prob not worth it
+        // self.seqLength = self.buffersize;  // divide out the constant?? prob not worth it
         // self.seqLength = Math.ceil(self.bufferSize / self.dataLength);
         // bind a UDP socket to the specified port
-        this.server = dgram.createSocket('udp4');
-        this.server.bind();
+        // this.server = dgram.createSocket('udp4');
+        // this.server.bind();
     });
     // return bufferArr;
 };
@@ -120,18 +121,24 @@ Sender.prototype.sendPackets = function (self) {
         var i = self.highestConsqAck;
 
         for (start = 0; i < self.window ; i += 1) {
+        
         if (!self.queue[i]) {
             self.logger.log("!this.queue[i]" + i);
-            self.highestConsqAck = i;
+            
         } else if (!self.ack[i]) {
-            self.window += 3;
+            self.ack[i] = false;
+            // self.window += 3;
             // hasnt been sent before, send it for hte first time 
         } else {  // if self.ack[i]==fale
             // probable duplicate but could be a time out
-        }
+            if ((self.highestConsqAck -= 1) === i) { 
+                self.highestConsqAck = i;
+            }
             // self.server.send(buffer, 0, buffer.length, self.port, self.host);
             self.logger.log("sending this.queue[--i]" + i);
             self.sendData(self.queue[i], false, false, self);
+        }
+            
     }// else { 
         //this.ackStatus[i + 1] = {acked: false};
             // will resend if it has timed out 
@@ -170,7 +177,7 @@ Sender.prototype.sendData = function (data, resending, seq, self) {
 
     self.logger.log('[send data] ' + self.sequence + ' (' + data.length + ')');
 
-    this.ack[sequence] = {acked: false};    // data is actually sent here
+    self.ack[sequence] = {acked: false};    // data is actually sent here
     self.server.send(buffer, 0, buffer.length, self.port, self.host);
 };
 
@@ -178,17 +185,18 @@ Sender.prototype.sendData = function (data, resending, seq, self) {
 Sender.prototype.rebroadcast = function(key, self) {
     "use strict";   
     // iterate over the ack array for outstanding packets
+    if (self.ack) { 
     Object.keys(self.ack).forEach(function(key) {
-    // if we find one resend it 
-    if (!self.ack[key].acked) {
-        // the data is in the queue which indexed by the sequence number
-       self.sendData(self.queue[key - 1], true, self.ack[key].seq);
-        //this.window--; 
+        // if we find one resend it 
+        if (!self.ack[key].acked) {
+            // the data is in the queue which indexed by the sequence number
+            self.sendData(self.queue[key - 1], true, self.ack[key].seq);
+            //this.window--; 
+        }
+    });
     }
-  }//);
-  // this.waitForAck();
-  );
 };
+
 
 // Returns a touple of [Chunk, Rest of string]
 Sender.prototype.stringToChunk = function (str) {
@@ -229,7 +237,8 @@ Sender.prototype.checkAnyOutstanding = function (self) {
 
 const sender = new Sender();
 
-var serverLoop = false;
+var serverLoop = true;
+
 sender.server.on('listening', function () {
     "use strict";
     // sender.logger.log('entering listening');
@@ -241,11 +250,11 @@ sender.server.on('listening', function () {
 
 
 while (serverLoop) { 
+    sender.listen(sender);
     sender.logger.log('entering serverloop');
     sender.sendPackets(sender);
     sender.waitForAck(sender);
     serverLoop = sender.checkAnyOutstanding(sender);
-    sender.rebroadcast(sender);
 }
 
 sender.server.on('message', function (msg, rinfo) {
@@ -256,9 +265,10 @@ sender.server.on('message', function (msg, rinfo) {
             sender.logger.log('[completed]');
             process.exit(rinfo);
         }
+        sender.window += 3;
         sender.listenAck(sender);
         var packetIndex = helpers.seqArrayIndexFromMessageBuffer(msg);
-        this.ack[packetIndex].acked = true;
+        sender.ack[packetIndex].acked = true;
 });
 
 // Logger.log("hi");
